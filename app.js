@@ -131,3 +131,35 @@ async function showByQuery(q) {
 
 // 초기 로드
 renderPlaceButtons();
+
+document.getElementById("checkLiveBtn").addEventListener("click", async () => {
+  try {
+    const res = await fetch("./data/places.json?v=" + Date.now(), { cache: "no-store" });
+    const data = await res.json();
+
+    if (!data.updated) {
+      alert("업데이트 시간을 확인할 수 없습니다.");
+      return;
+    }
+
+    const updatedAt = new Date(data.updated);
+    const now = new Date();
+
+    const diffMs = now - updatedAt;
+    const diffMin = Math.floor(diffMs / 1000 / 60);
+
+    let message = "";
+
+    if (diffMin <= 5) {
+      message = `✅ 최신 데이터입니다.\n(${diffMin}분 전 업데이트)`;
+    } else if (diffMin <= 15) {
+      message = `⚠️ 약간 이전 데이터입니다.\n(${diffMin}분 전 업데이트)`;
+    } else {
+      message = `❗ 오래된 데이터입니다.\n(${diffMin}분 전 업데이트)\n잠시 후 다시 확인하세요.`;
+    }
+
+    alert(message);
+  } catch (e) {
+    alert("데이터를 확인할 수 없습니다.");
+  }
+});
