@@ -3,7 +3,7 @@ name: fetch-seoul-live-population
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/30 * * * *" # 30분마다(UTC) - 테스트 끝나면 10분으로 줄여도 됨
 
 permissions:
   contents: write
@@ -13,4 +13,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # ...
+
+      - name: Fetch Seoul citydata -> data/latest.json
+        env:
+          SEOUL_API_KEY: ${{ secrets.SEOUL_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request, datetime
+
+          KEY = os.environ.get("SEOUL_API_KEY")
+          if not KEY:
+            raise SystemExit("Missing SEOUL_API_KEY secret")
+
+          PLACE = "강남역"  # ✅ 테스트용. 나중에 "홍대입구역" 등으로 바꿔도 됨.
+
+          url = f"http://openapi.seoul.go.kr:8088/{KEY}/json/citydata/1/5/" + urllib.parse.quote(PLACE, safe="")
+          with urllib.request.urlopen(url, timeout=20) as r:
+            payload = json.loads(r.read().decode("utf-8"))
+
+          def walk(obj):
+            if isinstance(obj, dict):
+              yield obj
+              for v in obj.values():
+                yield from walk(v)
+            elif isinstance(obj, list):
+              for x in obj:
+                yield from walk(x)
+
+          lvl_keys = ["AREA_CONGEST_LVL", "AREA_CONGEST_LVL_NM", "CONGEST_LVL", "CONGESTION_LEVEL"]
+          msg_keys = ["AREA_CONGEST_MSG", "CONGEST_MSG"]
+
+          level, msg = None, ""
+          for d in walk(payload):
+            for k in lvl_keys:
+              if k in d and isinstance(d[k], str) and d[k].strip():
+                level = d[k].strip()
+                for mk in msg_keys:
+                  if mk in d and isinstance(d[mk], str) and d[mk].strip():
+                    msg = d[mk].strip()
+                    break
+                break
+            if level:
+              break
+
+          out = {
+            "updated": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "place": PLACE,
+            "congestion": level or "알수없음",
+            "msg": msg
+          }
+
+          os.makedirs("data", exist_ok=True)
+          with open("data/latest.json", "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+
+          print(out)
+          PY
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git commit -m "chore: update latest.json" || exit 0
+          git push
