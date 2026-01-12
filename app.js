@@ -4,9 +4,9 @@ let PLACES_CACHE = null;
    [A] 서울시 실시간 도시데이터 API (OA-21778) 호출 함수 추가
    ========================= */
 async function fetchSeoulCitydataPpltn(place) {
-  const API_KEY = "SEOUL_API_KEY"; // TODO: 발급키로 교체
+  const API_KEY = "61585842506261613439564f4d4c57"; // TODO: 발급키로 교체
   const url =
-    `https://openapi.seoul.go.kr:8088/${API_KEY}/json/citydata_ppltn/1/5/` +
+    `https://openapi.seoul.go.kr:8088/${61585842506261613439564f4d4c57}/json/citydata_ppltn/1/5/` +
     encodeURIComponent(place);
 
   const res = await fetch(url, { cache: "no-store" });
