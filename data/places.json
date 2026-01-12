@@ -1,8 +1,8 @@
 {
   "updated": "manual-test",
   "items": [
-    { "place": "강남역", "congestion": "혼잡", "msg": "" },
-    { "place": "홍대입구역", "congestion": "매우혼잡", "msg": "" },
-    { "place": "명동", "congestion": "보통", "msg": "" }
+    { "place": "강남역", "congestion": "", "msg": "" },
+    { "place": "홍대입구역", "congestion": "", "msg": "" },
+    { "place": "명동", "congestion": "", "msg": "" }
   ]
 }
