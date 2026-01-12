@@ -1,15 +1,44 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <title>오늘 깔려죽을 확률</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>오늘 가면 깔려죽을 확률</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; padding: 24px; }
+    h1 { margin: 0 0 12px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    input { padding: 10px; width: 260px; }
+    button { padding: 10px 12px; cursor: pointer; }
+    .places { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+    .place-btn { border: 1px solid #ddd; background: #fff; border-radius: 999px; }
+    .place-btn:hover { background: #f6f6f6; }
+    .card { border: 1px solid #eee; border-radius: 12px; padding: 14px; background: #fafafa; max-width: 640px; }
+    .muted { color: #666; font-size: 12px; line-height: 1.4; }
+    .big { font-size: 18px; margin: 0 0 8px; }
+  </style>
 </head>
 <body>
   <h1>오늘 가면 깔려죽을 확률</h1>
-  <input id="place" placeholder="홍대, 강남역">
-  <button onclick="load()">확인</button>
-  <p id="result"></p>
 
-  <script src="app.js"></script>
+  <div class="row">
+    <input id="q" placeholder="예: 강남역, 홍대입구역" />
+    <button id="searchBtn">검색</button>
+    <button id="refreshBtn" title="places.json 다시 불러오기">목록 새로고침</button>
+  </div>
+
+  <div class="muted">
+    ※ 본 수치는 공공데이터 혼잡도를 기반으로 한 체감 지수이며 실제 사고 확률과 무관합니다.
+  </div>
+
+  <h3 style="margin-top:18px;">장소 목록(클릭)</h3>
+  <div id="places" class="places"></div>
+
+  <div id="result" class="card" style="margin-top: 10px;">
+    <p class="big">장소를 클릭하거나 검색해줘.</p>
+    <div class="muted" id="meta"></div>
+  </div>
+
+  <script src="app.js?v=3"></script>
 </body>
 </html>
