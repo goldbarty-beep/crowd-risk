@@ -1,5 +1,20 @@
 let PLACES_CACHE = null;
 
+/* =========================
+   [A] 서울시 실시간 도시데이터 API (OA-21778) 호출 함수 추가
+   ========================= */
+async function fetchSeoulCitydataPpltn(place) {
+  const API_KEY = "SEOUL_API_KEY"; // TODO: 발급키로 교체
+  const url =
+    `https://openapi.seoul.go.kr:8088/${API_KEY}/json/citydata_ppltn/1/5/` +
+    encodeURIComponent(place);
+
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`서울 OpenAPI 실패: ${res.status}`);
+
+  return await res.json();
+}
+
 function deepFind(obj, key) {
   if (!obj || typeof obj !== "object") return undefined;
   if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
@@ -12,12 +27,15 @@ function deepFind(obj, key) {
 
 async function getCongestionFor(place) {
   const data = await fetchSeoulCitydataPpltn(place);
+
   const lvl = deepFind(data, "AREA_CONGEST_LVL"); // 혼잡도 레벨/문구
   const msg = deepFind(data, "AREA_CONGEST_MSG"); // 혼잡 메시지
+
   return { place, lvl, msg, raw: data };
 }
 
-getCongestionFor("강남역").then(console.log);
+// ✅ (선택) 첫 로드시 콘솔 테스트 원하면 유지, 싫으면 주석처리
+// getCongestionFor("강남역").then(console.log).catch(console.error);
 
 document.getElementById("searchBtn").addEventListener("click", () => {
   const q = document.getElementById("q").value.trim();
@@ -68,7 +86,10 @@ async function renderPlaceButtons() {
     const btn = document.createElement("button");
     btn.className = "place-btn";
     btn.textContent = item.place;
-    btn.addEventListener("click", () => showItem(item));
+
+    // ✅ showItem이 async로 바뀜
+    btn.addEventListener("click", async () => showItem(item));
+
     wrap.appendChild(btn);
   });
 
@@ -84,6 +105,9 @@ function mapCongestionToRate(level) {
   // 숫자 레벨이 오면 대비
   const n = Number(s);
   if (!Number.isNaN(n)) {
+    // ⚠️ 여기 때문에 5% 고정이 자주 생김
+    // 서울시 도시데이터의 AREA_CONGEST_LVL이 1~4인데 의미가 반대(1=여유)인지(1=혼잡)인지 확인 필요
+    // 일단 네 기존 로직 유지. 만약 항상 5%면 아래를 "뒤집기"로 바꿔.
     if (n <= 1) return 5;
     if (n === 2) return 30;
     if (n === 3) return 65;
@@ -113,10 +137,33 @@ function rand(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function showItem(item) {
+/* =========================
+   [B] 핵심: showItem에서 실시간 API로 congestion 덮어쓰기
+   ========================= */
+async function showItem(item) {
   const place = item.place;
-  const congestion = item.congestion ?? "알수없음";
-  const msg = item.msg ?? "";
+
+  // 기본값(places.json)
+  let congestion = item.congestion ?? "알수없음";
+  let msg = item.msg ?? "";
+
+  // ✅ 실시간 조회해서 덮어쓰기
+  try {
+    const live = await getCongestionFor(place);
+
+    // 디버그: 실제로 뭐가 오는지 보면 5% 고정 원인 바로 나옴
+    console.log("[LIVE]", place, "lvl=", live.lvl, "msg=", live.msg);
+
+    if (live.lvl !== undefined && live.lvl !== null && String(live.lvl).trim() !== "") {
+      congestion = live.lvl;
+      msg = live.msg || "실시간";
+    } else {
+      msg = (msg ? msg + " / " : "") + "실시간 값 없음";
+    }
+  } catch (e) {
+    console.warn("[LIVE ERROR]", e);
+    msg = (msg ? msg + " / " : "") + "실시간 조회 실패";
+  }
 
   const rate = mapCongestionToRate(congestion);
   const line = pickMessage(congestion);
@@ -145,7 +192,9 @@ async function showByQuery(q) {
     `;
     return;
   }
-  showItem(target);
+
+  // ✅ showItem이 async
+  await showItem(target);
 }
 
 // 초기 로드
