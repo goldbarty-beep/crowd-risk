@@ -1,5 +1,24 @@
 let PLACES_CACHE = null;
 
+function deepFind(obj, key) {
+  if (!obj || typeof obj !== "object") return undefined;
+  if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
+  for (const k of Object.keys(obj)) {
+    const v = deepFind(obj[k], key);
+    if (v !== undefined) return v;
+  }
+  return undefined;
+}
+
+async function getCongestionFor(place) {
+  const data = await fetchSeoulCitydataPpltn(place);
+  const lvl = deepFind(data, "AREA_CONGEST_LVL"); // 혼잡도 레벨/문구
+  const msg = deepFind(data, "AREA_CONGEST_MSG"); // 혼잡 메시지
+  return { place, lvl, msg, raw: data };
+}
+
+getCongestionFor("강남역").then(console.log);
+
 document.getElementById("searchBtn").addEventListener("click", () => {
   const q = document.getElementById("q").value.trim();
   if (q) showByQuery(q);
